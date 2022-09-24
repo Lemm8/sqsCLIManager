@@ -33,6 +33,7 @@ def create_queue( client ):
             except botocore.exceptions.ClientError as error:
                 print(f'{bcolors.FAIL}Error:{bcolors.ENDC} {error} \n Ocurrió un error, no se puede crear el queue con el nombre "{bcolors.UNDERLINE}{name}{bcolors.ENDC}"')
             break
+    print('\n')
 
 
 def list_queue( client ):
@@ -47,6 +48,7 @@ def list_queue( client ):
         except botocore.exceptions.ClientError as error:
             print(f'{bcolors.FAIL}Error: {bcolors.ENDC} {error} \n Ocurrió un error, no se pueden listar los SQS')
         break
+    print('\n')
 
 def delete_queue( client ):    
     while (True):
@@ -57,6 +59,7 @@ def delete_queue( client ):
         except botocore.exceptions.ClientError as error:
             print(f'{bcolors.FAIL}Error: {bcolors.ENDC} {error} \n Ocurrió un error, no se puede borrar el queue con la Url: {bcolors.UNDERLINE}{bcolors.OKCYAN}{queueUrl}{bcolors.ENDC}')        
         break
+    print('\n')
 
 def send_message( client ):
     while (True):
@@ -75,6 +78,7 @@ def send_message( client ):
                 print('El valor tiene que estar entre 0 o 900')
         except ValueError:
                 print('No es una opción válida, vuelva a intentar')
+    print('\n')
 
 def receive_message( client ):
     while(True):
@@ -85,14 +89,18 @@ def receive_message( client ):
             if maxNumberOfMessages >= 1 and maxNumberOfMessages <= 10:
                 try:
                     response = client.receive_message( QueueUrl=queueUrl, MaxNumberOfMessages=maxNumberOfMessages, WaitTimeSeconds=waitTimeSeconds )
-                    print(f'{response} \n Se recibieron los mensajes.')
+                    print(f'Se recibieron {bcolors.BOLD}{len(response.get("Messages", []))}{bcolors.ENDC} mensajes.')
+                    for message in response['Messages']:
+                        print(f'{bcolors.OKBLUE}Message Body{bcolors.ENDC}: {message["Body"]}')
+                        print(f'{bcolors.WARNING}Recepit Handle{bcolors.ENDC}: {message["ReceiptHandle"]} \n')
                 except botocore.exceptions.ClientError as error:
                     print(f'{bcolors.FAIL}Error: {bcolors.ENDC} {error} \n Ocurrió un error, no se pueden recibir los mensajes en el queue con la Url: {bcolors.UNDERLINE}{bcolors.OKCYAN}{queueUrl}{bcolors.ENDC}')
                 break
             else:
-                print('El valor tiene que estar entre 1 y 10')
+                print('El numero de mensajes debe ser entre 1 y 10')
         except ValueError:
             print('No es una opción válida, vuelva a intentar')
+    print('\n')
 
 def delete_message( client ):
     while (True):
@@ -104,6 +112,63 @@ def delete_message( client ):
         except botocore.exceptions.ClientError as error:
             print(f'{bcolors.FAIL}Error: {bcolors.ENDC} {error} \n Ocurrió un error, no se puede borrar el mensaje en el queue con la Url: {bcolors.UNDERLINE}{bcolors.OKCYAN}{queueUrl}{bcolors.ENDC}')
         break
+    print('\n')
+
+def tag_queue( client ):
+    while(True):
+        queueUrl = input('Url del queue: ')
+        no_tags = int(input('Numero de tags: '))
+        tags = {}
+        for _ in range(no_tags):
+            tag_name = input('Nombre del tag: ')
+            tag_value = input('Valor del tag: ')
+            tags[tag_name] = tag_value
+        try:
+            response = client.tag_queue( QueueUrl=queueUrl, Tags=tags )
+            print(f'{response} \n Se añadieron los tags: ')
+            for tag in tags:
+                print( f'{bcolors.BOLD} {tag}: {bcolors.OKBLUE} {tags[tag]} {bcolors.ENDC}' )
+            print(f'al queue con la url: {bcolors.UNDERLINE}{bcolors.OKCYAN}{queueUrl}{bcolors.ENDC}')
+        except botocore.exceptions.ClientError as error:
+            print(f'{bcolors.FAIL}Error: {bcolors.ENDC} {error} \n Ocurrió un error, no se pueden agregar los tags al queue con la Url: {bcolors.UNDERLINE}{bcolors.OKCYAN}{queueUrl}{bcolors.ENDC}')
+        break
+    print('\n')
+
+def list_queue_tags( client ):
+    while( True ):
+        queueUrl = input('Url del queue: ')        
+        try:
+            response = client.list_queue_tags( QueueUrl=queueUrl )
+            if len(response.get("Tags", [])) == 0:
+                print(f'No hay tags en este queue')
+            else:
+                print(f'{bcolors.OKBLUE}Tags: {bcolors.ENDC} ')
+                for tag in response['Tags']:
+                    print(f'- {bcolors.BOLD} {tag}: {bcolors.OKGREEN}{response["Tags"][tag]}{bcolors.ENDC}')
+        except botocore.exceptions.ClientError as error:
+            print(f'{bcolors.FAIL}Error: {bcolors.ENDC} {error} \n Ocurrió un error, no se pueden listar los tags del queue con la Url: {bcolors.UNDERLINE}{bcolors.OKCYAN}{queueUrl}{bcolors.ENDC}')
+        break
+    print('\n')
+
+def untag_queue( client ):
+    while(True):
+        queueUrl = input('Url del queue: ')
+        tag_keys = []
+        c = True
+        print( 'Ingresa los tags a eliminar (ingresa 0 para salir)' )
+        while(c == True):
+            key = input('Tag: ')
+            if key == '0':
+                c = False
+            else:
+                tag_keys.append( key )
+        try:
+            response = client.untag_queue( QueueUrl=queueUrl, TagKeys=tag_keys )
+            print(f'{response} \n se han borrado los tags {bcolors.OKBLUE} {tag_keys} {bcolors.ENDC} del queue con la Url: {bcolors.UNDERLINE}{bcolors.OKCYAN}{queueUrl}{bcolors.ENDC}')
+        except botocore.exceptions.ClientError as error:
+            print(f'{bcolors.FAIL}Error: {bcolors.ENDC} {error} \n Ocurrió un error, no se pueden borrar los tags del queue con la Url: {bcolors.UNDERLINE}{bcolors.OKCYAN}{queueUrl}{bcolors.ENDC}')
+        break
+    print('\n')
 
 menu_options = {
     1: {
@@ -129,6 +194,18 @@ menu_options = {
     6: {
         "title": "Delete Message",
         "action": delete_message
+    },
+    6: {
+        "title": "Tag queue",
+        "action": tag_queue
+    },
+    7: {
+        "title": "List queue tags",
+        "action": list_queue_tags
+    },
+    8: {
+        "title": "Untag queue",
+        "action": untag_queue
     }
 }
 
@@ -150,6 +227,7 @@ def main():
             option = int(input(f'{bcolors.ENDC}Ingrese el número de la acción a ejecutar (ingrese 0 para salir): \n'))
 
             if option == 0:
+                client.close()
                 exit(0)        
             elif option > 0 and option <= len( menu_options ):
                 menu_options[option]["action"](client)
